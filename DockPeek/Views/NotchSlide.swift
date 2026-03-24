@@ -61,19 +61,24 @@ class NotchSlideController {
         let cy = windowH / 2
         dotView.frame = NSRect(x: startX, y: cy - dotSize / 2, width: dotSize, height: dotSize)
         label.frame = NSRect(x: startX + dotSize + gap, y: cy - 9, width: labelW + 4, height: 18)
-        bg.frame = NSRect(x: 0, y: 0, width: expandedW, height: windowH)
+        // Background only covers content + small overlap behind notch (not full notch width)
+        let notchOverlap: CGFloat = 10
+        let bgWidth = contentWidth + notchOverlap
+        bg.frame = NSRect(x: 0, y: 0, width: bgWidth, height: windowH)
 
-        // Phase 1: Instant — place at notch position (hidden behind hardware)
-        w.setFrame(NSRect(x: notchLeftEdge, y: windowY, width: notchW, height: windowH), display: false)
+        // Phase 1: Instant — place so the bg overlaps behind the notch left edge
+        let hiddenX = notchLeftEdge - notchOverlap
+        w.setFrame(NSRect(x: hiddenX, y: windowY, width: bgWidth, height: windowH), display: false)
         w.orderFront(nil)
         self.window = w
 
         // Phase 2: Smooth — slide left to reveal content
+        let visibleX = notchLeftEdge - contentWidth
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = animationSpeed
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
             w.animator().setFrame(
-                NSRect(x: expandedX, y: windowY, width: expandedW, height: windowH),
+                NSRect(x: visibleX, y: windowY, width: bgWidth, height: windowH),
                 display: false
             )
         }
@@ -98,11 +103,14 @@ class NotchSlideController {
         let windowY = topEdge - windowH
 
         // Smooth — slide right back behind notch
+        let notchOverlap: CGFloat = 10
+        let hiddenX = notchLeftEdge - notchOverlap
+        let bgWidth = w.frame.width
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = animationSpeed
             ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
             w.animator().setFrame(
-                NSRect(x: notchLeftEdge, y: windowY, width: notchW, height: windowH),
+                NSRect(x: hiddenX, y: windowY, width: bgWidth, height: windowH),
                 display: false
             )
         }, completionHandler: {
