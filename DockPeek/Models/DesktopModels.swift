@@ -64,8 +64,9 @@ enum LabelMode: String, Codable, CaseIterable {
 /// Settings for the desktop indicator (Notch Drop, Notch Slide, Floating Badge).
 struct LabelSettings: Codable, Hashable {
     var indicatorStyle: IndicatorStyle = .notchDrop
-    // Menu Bar Badge: shows desktop color dot + name in the menu bar (parallel to other styles)
-    var showMenuBarBadge: Bool = false
+    // Menu Bar
+    var showMenuBarIcon: Bool = true    // show DockPeek icon in menu bar
+    var showMenuBarBadge: Bool = false  // show desktop color dot + name instead of icon
     // Notch Drop / Notch Slide settings
     var notchDropHold: Double = 1.8     // seconds the badge stays visible
     var notchDropSpeed: Double = 0.3    // seconds for slide animation

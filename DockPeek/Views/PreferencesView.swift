@@ -251,9 +251,15 @@ struct PreferencesView: View {
     private var displayTab: some View {
         Form {
             Section("Men\u{00FC}leiste") {
-                Toggle("Desktop-Farbe & Name in Men\u{00FC}leiste", isOn: lb(\.showMenuBarBadge))
-                Text("Zeigt statt dem DockPeek-Icon eine farbige Kugel mit dem Desktop-Namen in der Men\u{00FC}leiste. Aktualisiert sich bei jedem Desktop-Wechsel.")
-                    .font(.callout).foregroundStyle(.secondary)
+                Toggle("Icon in der Men\u{00FC}leiste anzeigen", isOn: lb(\.showMenuBarIcon))
+                if store.labelSettings.showMenuBarIcon {
+                    Toggle("Desktop-Farbe & Name anzeigen", isOn: lb(\.showMenuBarBadge))
+                    Text("Zeigt statt dem DockPeek-Icon eine farbige Kugel mit dem Desktop-Namen. \u{00D6}ffne die App erneut (z.B. \u{00FC}ber Spotlight) um die Einstellungen aufzurufen wenn das Icon deaktiviert ist.")
+                        .font(.callout).foregroundStyle(.secondary)
+                } else {
+                    Text("DockPeek l\u{00E4}uft unsichtbar im Hintergrund. \u{00D6}ffne die App erneut (z.B. \u{00FC}ber Spotlight) um die Einstellungen aufzurufen.")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
             }
 
             Section("Desktop-Anzeige beim Wechsel") {

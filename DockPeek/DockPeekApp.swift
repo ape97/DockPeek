@@ -6,7 +6,10 @@ struct DockPeekApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        MenuBarExtra {
+        MenuBarExtra(isInserted: Binding(
+            get: { store.labelSettings.showMenuBarIcon },
+            set: { _ in }
+        )) {
             Section(NSLocalizedString("menu.desktops", comment: "")) {
                 ForEach(store.desktops) { desktop in
                     Label(
