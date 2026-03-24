@@ -29,6 +29,3 @@ Pods/
 *.mobileprovision
 *.p12
 
-# Claude
-CLAUDE.md
-BUGS_AND_FIXES.md
