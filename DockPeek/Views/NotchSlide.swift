@@ -11,7 +11,7 @@ class NotchSlideController {
     private let noNotchWidth: CGFloat = 180
     private let pillHeight: CGFloat = 28
     private let cornerRadius: CGFloat = 14
-    private let contentWidth: CGFloat = 140
+    private let contentPadding: CGFloat = 24 // horizontal padding around dot+text
 
     private func notchGeometry(for screen: NSScreen) -> (width: CGFloat, centerX: CGFloat, leftEdge: CGFloat)? {
         guard let left = screen.auxiliaryTopLeftArea,
@@ -39,8 +39,6 @@ class NotchSlideController {
         let notchH: CGFloat = hasNotch ? screen.safeAreaInsets.top : 0
         let windowH = hasNotch ? notchH : pillHeight
         let windowY = topEdge - windowH
-        let expandedW = notchW + contentWidth
-        let expandedX = notchLeftEdge - contentWidth
 
         // Create fresh window
         let w = makeWindow(hasNotch: hasNotch, height: windowH)
@@ -52,12 +50,14 @@ class NotchSlideController {
         label.sizeToFit()
         dotView.layer?.backgroundColor = color.cgColor
 
-        // Layout content in the left (visible) part
+        // Dynamic content width based on actual text
         let dotSize: CGFloat = 8
         let gap: CGFloat = 8
         let labelW = label.frame.width
-        let totalW = dotSize + gap + labelW
-        let startX = (contentWidth - totalW) / 2
+        let contentWidth = dotSize + gap + labelW + contentPadding
+        let expandedW = notchW + contentWidth
+        let expandedX = notchLeftEdge - contentWidth
+        let startX = contentPadding / 2
         let cy = windowH / 2
         dotView.frame = NSRect(x: startX, y: cy - dotSize / 2, width: dotSize, height: dotSize)
         label.frame = NSRect(x: startX + dotSize + gap, y: cy - 9, width: labelW + 4, height: 18)
