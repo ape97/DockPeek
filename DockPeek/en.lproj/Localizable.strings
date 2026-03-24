@@ -1,0 +1,26 @@
+/* Menu Bar */
+"menu.desktops" = "Desktops";
+"menu.settings" = "Settings …";
+"menu.quit" = "Quit";
+
+/* Settings Tabs */
+"tab.desktops" = "Desktops";
+"tab.appearance" = "Appearance";
+"tab.behavior" = "Behavior";
+"tab.system" = "System";
+"tab.help" = "Help";
+
+/* System Tab */
+"system.permissions" = "Permissions";
+"system.accessibility" = "Accessibility";
+"system.screenRecording" = "Screen Recording";
+"system.request" = "Request";
+"system.refreshStatus" = "Refresh status";
+"system.macosConfig" = "macOS Configuration";
+"system.configDesc" = "The following macOS settings are required for optimal operation:";
+"system.dockNoSwitch" = "Dock does not automatically switch desktops";
+"system.appNoSwitch" = "Apps do not automatically switch desktops";
+"system.configureOptimal" = "Configure optimally";
+"system.autostart" = "Autostart";
+"system.startAtLogin" = "Start at login";
+"system.autostartDesc" = "DockPeek starts automatically after login.";
