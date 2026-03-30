@@ -318,7 +318,9 @@ class DockPreviewController {
 
     // MARK: - Dock Visibility
 
-    /// Prüft ob der Dock sichtbar ist (nicht auto-hidden)
+    /// Prüft ob der Dock sichtbar ist (nicht auto-hidden).
+    /// Der Dock-Prozess hat sein Hauptfenster bei Layer 20 (nicht 0).
+    /// Bei Auto-Hide verschwindet es aus der OnScreen-Liste.
     private func isDockVisible() -> Bool {
         let dockPID = NSRunningApplication.runningApplications(
             withBundleIdentifier: "com.apple.dock"
@@ -328,9 +330,10 @@ class DockPreviewController {
             [.optionOnScreenOnly], kCGNullWindowID
         ) as? [[String: Any]] else { return true }
 
+        // Dock bar is at layer ~20, context menus are higher (>25)
         return windowList.contains { info in
             (info[kCGWindowOwnerPID as String] as? pid_t) == dockPID &&
-            (info[kCGWindowLayer as String] as? Int) == 0
+            (info[kCGWindowLayer as String] as? Int) == 20
         }
     }
 
