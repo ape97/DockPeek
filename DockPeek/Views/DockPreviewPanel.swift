@@ -526,17 +526,23 @@ class DockPreviewController {
             }
         }
 
-        // Detect fullscreen spaces and map them to their adjacent desktop for color
+        // Detect fullscreen spaces and map them to their origin desktop.
+        // macOS places fullscreen spaces AFTER their origin desktop in the space list.
         let allSpaces = detector.detectSpaces()
         let fullscreenSpaceIDs = Set(allSpaces.filter(\.isFullscreen).map(\.spaceID))
 
-        // Map fullscreen spaces to the desktop the user is currently on
-        // macOS puts fullscreen spaces at the END of the list (not next to origin),
-        // so we can't determine the true origin. Use current desktop as best guess.
+        // Map fullscreen spaces to origin desktop using space list order.
+        // macOS places fullscreen spaces AFTER their origin desktop in the list,
+        // so we track the last regular desktop and assign it to each following fullscreen.
         let currentDesktopID = detector.currentSpaceID()
         var fullscreenToDesktop: [Int: Int] = [:]
-        for fsID in fullscreenSpaceIDs {
-            fullscreenToDesktop[fsID] = currentDesktopID
+        var lastRegularSpaceID = currentDesktopID
+        for space in allSpaces {
+            if !space.isFullscreen {
+                lastRegularSpaceID = space.spaceID
+            } else if fullscreenSpaceIDs.contains(space.spaceID) {
+                fullscreenToDesktop[space.spaceID] = lastRegularSpaceID
+            }
         }
 
         for window in appWindows {
