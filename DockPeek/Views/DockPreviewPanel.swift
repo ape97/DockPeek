@@ -636,8 +636,10 @@ class DockPreviewController {
 
     // MARK: - Display
 
-    private var maxThumbsPerDesktop: Int { Int(store?.previewSettings.maxWindowsPerGroup ?? 5) }
-    private let maxHiddenOverflow = 5
+    // DEACTIVATED: Preview-Only Mode (2026-03-30)
+    // Was: maxThumbsPerDesktop und maxHiddenOverflow — Limits für sichtbare/versteckte Karten
+    // private var maxThumbsPerDesktop: Int { Int(store?.previewSettings.maxWindowsPerGroup ?? 5) }
+    // private let maxHiddenOverflow = 5
 
     /// Placeholder when app is running but has no windows
     private func displayEmptyAppPanel(bundleID: String, appName: String, appIcon: NSImage?, at mousePoint: NSPoint) {
@@ -646,9 +648,8 @@ class DockPreviewController {
 
         contentView.subviews.forEach { $0.removeFromSuperview() }
 
-        let desktopColor = store.colorForCurrentDesktop()
-        let isQuittable = bundleID != "com.apple.finder"
-        let bid = bundleID
+        // DEACTIVATED: Preview-Only Mode (2026-03-30)
+        // Was: desktopColor, isQuittable, bid — nur für Buttons/Kontextmenü benötigt
 
         // Same dimensions as a single-window preview
         let tw = CGFloat(store.previewSettings.thumbnailWidth)
@@ -664,37 +665,18 @@ class DockPreviewController {
         panel.setContentSize(NSSize(width: panelW, height: totalH))
         contentView.frame = NSRect(x: 0, y: markerH, width: panelW, height: contentH)
 
-        // Layout group: icon + text + button, centered vertically
+        // Layout group: icon + text, centered vertically (read-only, no buttons)
         let iconSize: CGFloat = 36
         let textH: CGFloat = 14
-        let btnH: CGFloat = 22
         let gapIconText: CGFloat = 6
-        let gapTextBtn: CGFloat = 8
-        let groupH = iconSize + gapIconText + textH + gapTextBtn + btnH
+        let groupH = iconSize + gapIconText + textH
         let usableTop = contentH - headerH
         let usableBottom: CGFloat = pad
         let groupStartY = usableBottom + (usableTop - usableBottom - groupH) / 2
 
-        // "+ Neues Fenster" button (bottom of group)
-        let btnW: CGFloat = min(115, panelW - 16)
-        let btnY = groupStartY
-        let newBtn = ClickableView(frame: NSRect(x: panelW/2 - btnW/2, y: btnY, width: btnW, height: 22))
-        newBtn.wantsLayer = true
-        newBtn.layer?.cornerRadius = 6
-        newBtn.layer?.backgroundColor = desktopColor.withAlphaComponent(0.2).cgColor
-        newBtn.layer?.borderWidth = 1
-        newBtn.layer?.borderColor = desktopColor.withAlphaComponent(0.3).cgColor
-        newBtn.savedBorderColor = desktopColor.withAlphaComponent(0.3).cgColor
-        let btnLabel = NSTextField(labelWithString: "+ Neues Fenster")
-        btnLabel.font = .systemFont(ofSize: 10, weight: .semibold)
-        btnLabel.textColor = desktopColor
-        btnLabel.alignment = .center
-        btnLabel.frame = NSRect(x: 0, y: 3, width: btnW, height: 14)
-        newBtn.addSubview(btnLabel)
-
-        // "Keine Fenster" text (above button)
-        let textY = btnY + btnH + gapTextBtn
-        let label = NSTextField(labelWithString: "\(appName) · Keine Fenster")
+        // "Keine Fenster" text
+        let textY = groupStartY
+        let label = NSTextField(labelWithString: "\(appName) \u{00B7} Keine Fenster")
         label.font = .systemFont(ofSize: 10, weight: .medium)
         label.textColor = .secondaryLabelColor
         label.alignment = .center
@@ -712,39 +694,10 @@ class DockPreviewController {
             contentView.addSubview(iv)
         }
 
-        newBtn.onClick = { [weak self] in
-            _ = self?.store?.dockManager.openNewWindow(bundleIdentifier: bid)
-            self?.hidePanel()
-        }
-        // Right-click anywhere → context menu
-        newBtn.onRightClick = { [weak self] pt in
-            guard let self else { return }
-            let menu = NSMenu()
-            let newItem = NSMenuItem(title: "Neues Fenster", action: #selector(self.openNewWindowFromMenu(_:)), keyEquivalent: "")
-            newItem.target = self
-            newItem.representedObject = bid
-            menu.addItem(newItem)
-            menu.addItem(.separator())
-            let quitItem = NSMenuItem(title: "App beenden", action: #selector(self.quitAppFromMenu(_:)), keyEquivalent: "")
-            quitItem.target = self
-            quitItem.representedObject = bid
-            if !isQuittable { quitItem.isEnabled = false }
-            menu.addItem(quitItem)
-            menu.popUp(positioning: nil, at: pt, in: newBtn)
-        }
-        contentView.addSubview(newBtn)
-
-        // Red quit button (top-left, like window close button but red)
-        if isQuittable {
-            let quitBtn = CloseButton(frame: NSRect(x: pad + 1, y: contentH - headerH - 17, width: 16, height: 16))
-            quitBtn.isRedStyle = true
-            quitBtn.alphaValue = 1 // always visible
-            quitBtn.onClose = { [weak self] in
-                self?.terminateApp(bundleID: bid)
-                self?.hidePanel()
-            }
-            contentView.addSubview(quitBtn)
-        }
+        // DEACTIVATED: Preview-Only Mode (2026-03-30)
+        // Was: "+ Neues Fenster" Button im Empty-State
+        // Was: Rechtsklick-Kontextmenü im Empty-State
+        // Was: Red Quit-Button (CloseButton) im Empty-State
 
         // Position
         var px = mousePoint.x - panelW / 2
@@ -805,13 +758,12 @@ class DockPreviewController {
         let groupGap: CGFloat = 10
         let maxPanelW = screen.frame.width - 40
 
-        // Calculate content width
+        // Calculate content width — show ALL windows (no overflow limit)
         var contentW: CGFloat = pad
         for group in groups {
-            let count = min(group.windows.count, maxThumbsPerDesktop)
+            let count = group.windows.count
             let groupW = CGFloat(count) * (tw + gap) - gap
-            let overflow = group.windows.count - count
-            contentW += groupW + (overflow > 0 ? 26 : 0) + groupGap
+            contentW += groupW + groupGap
         }
         contentW = contentW - groupGap + pad
         let contentH = headerH + th + titleH + 4 + pad * 2
@@ -867,7 +819,9 @@ class DockPreviewController {
         for (groupIdx, group) in groups.enumerated() {
             var currentGroupViews: [NSView] = []
             let color = colorForDesktop(index: group.desktopIndex)
-            let count = min(group.windows.count, maxThumbsPerDesktop)
+            // DEACTIVATED: Preview-Only Mode — show all windows
+            // Was: let count = min(group.windows.count, maxThumbsPerDesktop)
+            let count = group.windows.count
             let groupW = CGFloat(count) * (tw + gap) - gap
 
             // Header: [● DesktopName ... (🔒) AppIcon (AppName)]
@@ -929,11 +883,11 @@ class DockPreviewController {
             dLbl.frame = NSRect(x: 17, y: 2, width: max(rightEdge - 20, 30), height: 14)
             hdr.addSubview(dLbl)
 
-            // Thumbnails: render visible + hidden overflow for smooth close animation
-            let renderCount = min(group.windows.count, maxThumbsPerDesktop + maxHiddenOverflow)
+            // DEACTIVATED: Preview-Only Mode — show all windows, no overflow limit
+            // Was: let renderCount = min(group.windows.count, maxThumbsPerDesktop + maxHiddenOverflow)
+            let renderCount = group.windows.count
             for (i, thumb) in group.windows.prefix(renderCount).enumerated() {
                 let x = xOffset + CGFloat(i) * (tw + gap)
-                let isOverflow = i >= maxThumbsPerDesktop
 
                 let card = ClickableView(frame: NSRect(
                     x: x, y: contentH - pad - headerH - th - 2, width: tw, height: th
@@ -944,7 +898,9 @@ class DockPreviewController {
                 card.layer?.borderWidth = 1
                 card.layer?.borderColor = color.withAlphaComponent(0.3).cgColor
                 card.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.04).cgColor
-                if isOverflow { card.alphaValue = 0; card.layer?.zPosition = -1 }
+                // DEACTIVATED: Preview-Only Mode (2026-03-30)
+                // Was: Overflow-Karten unsichtbar machen
+                // if isOverflow { card.alphaValue = 0; card.layer?.zPosition = -1 }
 
                 // Thumbnail image (clipped)
                 let clipView = NSView(frame: NSRect(x: 0, y: 0, width: tw, height: th))
@@ -1012,13 +968,13 @@ class DockPreviewController {
                 stateIcon.toolTip = badgeTooltip
                 card.addSubview(stateIcon)
 
-                // Click + right-click
+                // Click handler — focus window + switch desktop
                 let windowID = thumb.windowID
                 let spaceID = thumb.spaceID
                 let pid = thumb.pid
                 let bid = thumb.bundleID
-                let wID = thumb.windowID
-                let wPID = thumb.pid
+                // DEACTIVATED: Preview-Only Mode (2026-03-30)
+                // Was: wID, wPID — nur für Close-Button und Kontextmenü benötigt
                 card.onClick = { [weak self] in
                     guard let self, let store = self.store else { return }
                     if store.isSingleInstance(bid) {
@@ -1028,239 +984,16 @@ class DockPreviewController {
                     }
                     self.hidePanel()
                 }
-                card.onRightClick = { [weak self] pt in
-                    guard let self, let store = self.store else { return }
-                    let menu = NSMenu()
-
-                    // Close window
-                    let closeItem = NSMenuItem(title: "Fenster schließen", action: #selector(self.closeWindowFromMenu(_:)), keyEquivalent: "")
-                    closeItem.target = self
-                    closeItem.representedObject = ["wid": wID, "pid": wPID, "title": thumb.title] as [String: Any]
-                    menu.addItem(closeItem)
-
-                    // Close all windows
-                    let closeAllItem = NSMenuItem(title: "Alle Fenster schließen", action: #selector(self.closeAllWindowsFromMenu(_:)), keyEquivalent: "")
-                    closeAllItem.target = self
-                    closeAllItem.representedObject = bid
-                    menu.addItem(closeAllItem)
-
-                    // Quit app (disabled for Finder — can't be quit)
-                    let quitItem = NSMenuItem(title: "App beenden", action: #selector(self.quitAppFromMenu(_:)), keyEquivalent: "")
-                    quitItem.target = self
-                    quitItem.representedObject = bid
-                    if bid == "com.apple.finder" { quitItem.isEnabled = false }
-                    menu.addItem(quitItem)
-
-                    menu.addItem(.separator())
-
-                    // Single instance toggle
-                    let isSingle = store.isSingleInstance(bid)
-                    let singleItem = NSMenuItem(
-                        title: isSingle ? "✓ Einzelne Instanz" : "Einzelne Instanz",
-                        action: #selector(self.toggleSingleInstanceFromMenu(_:)),
-                        keyEquivalent: ""
-                    )
-                    singleItem.target = self
-                    singleItem.representedObject = bid
-                    menu.addItem(singleItem)
-
-                    menu.popUp(positioning: nil, at: pt, in: card)
-                }
+                // DEACTIVATED: Preview-Only Mode (2026-03-30)
+                // Was: Rechtsklick-Kontextmenü (Close, Quit, Single-Instance)
+                // card.onRightClick = { ... }
                 clickableViews.append(card)
                 cardGroupIndex.append(groupIdx)
                 innerView.addSubview(card)
 
-                // Close button INSIDE card at top-left corner
-                let closeBtn = CloseButton(frame: NSRect(x: 1, y: th - 17, width: 16, height: 16))
-                closeBtn.wantsLayer = true
-                closeBtn.layer?.zPosition = 10 // render above card border
-                closeBtn.onClose = { [weak self] in
-                    guard let self else { return }
-
-                    let wasRealWindow = self.closeWindow(windowID: wID, pid: wPID, title: thumb.title)
-                    self.currentThumbnails.removeAll { $0.windowID == wID }
-
-                    if self.currentThumbnails.isEmpty {
-                        // Dialog closed → show empty placeholder, skip this dialog in auto-refresh
-                        if !wasRealWindow {
-                            self.recentlyClosedDialogIDs[wID] = Date()
-                        }
-                        // Invalidate any in-flight async refresh so it doesn't overwrite our state
-                        self.displayGeneration += 1
-                        // Prevent tick() from hiding the panel while we transition to empty state
-                        self.closeCooldownUntil = Date().addingTimeInterval(0.5)
-                        // Real window closed → show empty placeholder if app still running
-                        let isRunning = NSWorkspace.shared.runningApplications.contains { $0.bundleIdentifier == bid }
-                        if isRunning {
-                            let appIcon: NSImage? = NSWorkspace.shared
-                                .urlForApplication(withBundleIdentifier: bid)
-                                .map { NSWorkspace.shared.icon(forFile: $0.path) }
-                            let appName = NSWorkspace.shared.runningApplications
-                                .first(where: { $0.bundleIdentifier == bid })?.localizedName ?? ""
-                            self.displayEmptyAppPanel(bundleID: bid, appName: appName, appIcon: appIcon, at: self.lastPanelIconCenter)
-                        } else {
-                            self.hidePanel()
-                        }
-                        return
-                    }
-
-                    guard let idx = self.clickableViews.firstIndex(where: { $0 === card }) else { return }
-                    let shift = tw + gap
-                    let closedGroup = idx < self.cardGroupIndex.count ? self.cardGroupIndex[idx] : -1
-
-                    // Find hidden overflow card in same group
-                    let firstHidden = self.clickableViews.enumerated().first(where: {
-                        $0.offset > idx && $0.element.alphaValue == 0 &&
-                        $0.offset < self.cardGroupIndex.count && self.cardGroupIndex[$0.offset] == closedGroup
-                    })
-
-                    NSAnimationContext.runAnimationGroup { ctx in
-                        ctx.duration = 0.3
-                        ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-
-                        // 1. Fade out closed card + label
-                        card.animator().alphaValue = 0
-                        if idx < self.titleLabels.count {
-                            self.titleLabels[idx].animator().alphaValue = 0
-                        }
-
-                        // 2. Slide cards in SAME group to the left
-                        for j in (idx + 1)..<self.clickableViews.count {
-                            guard j < self.cardGroupIndex.count else { break }
-                            if self.cardGroupIndex[j] != closedGroup { break }
-                            if j == firstHidden?.offset { continue }
-                            var cf = self.clickableViews[j].frame
-                            cf.origin.x -= shift
-                            if self.clickableViews[j].alphaValue > 0 {
-                                self.clickableViews[j].animator().frame = cf
-                            } else {
-                                self.clickableViews[j].frame = cf
-                            }
-                            if j < self.titleLabels.count {
-                                var tf = self.titleLabels[j].frame
-                                tf.origin.x -= shift
-                                if self.titleLabels[j].alphaValue > 0 {
-                                    self.titleLabels[j].animator().frame = tf
-                                } else {
-                                    self.titleLabels[j].frame = tf
-                                }
-                            }
-                        }
-
-                        // 3a. Overflow: reveal hidden card
-                        if let (hiddenIdx, hiddenCard) = firstHidden {
-                            hiddenCard.layer?.zPosition = 0
-                            var hf = hiddenCard.frame
-                            hf.origin.x -= shift
-                            hiddenCard.animator().frame = hf
-                            hiddenCard.animator().alphaValue = 1
-                            if hiddenIdx < self.titleLabels.count {
-                                var tf = self.titleLabels[hiddenIdx].frame
-                                tf.origin.x -= shift
-                                self.titleLabels[hiddenIdx].animator().frame = tf
-                                self.titleLabels[hiddenIdx].animator().alphaValue = 1
-                            }
-                        }
-
-                        // 3b. No overflow: shrink current group header + slide subsequent groups
-                        if firstHidden == nil {
-                            // Shrink current group header
-                            if closedGroup >= 0 && closedGroup < self.groupViews.count {
-                                for view in self.groupViews[closedGroup] {
-                                    var f = view.frame
-                                    f.size.width -= shift
-                                    view.animator().frame = f
-                                }
-                            }
-                            // Slide ALL subsequent groups (headers + cards + labels)
-                            for g in (closedGroup + 1)..<self.groupViews.count {
-                                for view in self.groupViews[g] {
-                                    var f = view.frame
-                                    f.origin.x -= shift
-                                    view.animator().frame = f
-                                }
-                            }
-                            for j in 0..<self.clickableViews.count {
-                                guard j < self.cardGroupIndex.count else { break }
-                                if self.cardGroupIndex[j] > closedGroup {
-                                    var cf = self.clickableViews[j].frame
-                                    cf.origin.x -= shift
-                                    self.clickableViews[j].animator().frame = cf
-                                    if j < self.titleLabels.count {
-                                        var tf = self.titleLabels[j].frame
-                                        tf.origin.x -= shift
-                                        self.titleLabels[j].animator().frame = tf
-                                    }
-                                }
-                            }
-                            // Shrink panel from right
-                            if let panel = self.panel {
-                                var pf = panel.frame
-                                pf.size.width -= shift
-                                panel.animator().setFrame(pf, display: true)
-                            }
-                        }
-                    }
-
-                    // Update arrays
-                    self.clickableViews.remove(at: idx)
-                    if idx < self.titleLabels.count { self.titleLabels.remove(at: idx) }
-                    if idx < self.cardGroupIndex.count { self.cardGroupIndex.remove(at: idx) }
-
-                    // If a group has no visible cards left, fade out its header
-                    if closedGroup >= 0 && closedGroup < self.groupViews.count {
-                        let groupHasVisibleCards = self.cardGroupIndex.enumerated().contains(where: {
-                            $0.element == closedGroup && $0.offset < self.clickableViews.count && self.clickableViews[$0.offset].alphaValue > 0
-                        })
-                        if !groupHasVisibleCards {
-                            NSAnimationContext.runAnimationGroup { ctx in
-                                ctx.duration = 0.2
-                                for view in self.groupViews[closedGroup] {
-                                    view.animator().alphaValue = 0
-                                }
-                            }
-                        }
-                    }
-
-                    // All cards closed → show empty placeholder if app still running
-                    if self.clickableViews.filter({ $0.alphaValue > 0 }).isEmpty {
-                        self.pendingRefreshTask?.cancel()
-                        self.closeCooldownUntil = Date().addingTimeInterval(0.5)
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                            guard let self else { return }
-                            let isRunning = NSWorkspace.shared.runningApplications.contains { $0.bundleIdentifier == bid }
-                            if isRunning {
-                                let appIcon: NSImage? = NSWorkspace.shared
-                                    .urlForApplication(withBundleIdentifier: bid)
-                                    .map { NSWorkspace.shared.icon(forFile: $0.path) }
-                                let appName = NSWorkspace.shared.runningApplications
-                                    .first(where: { $0.bundleIdentifier == bid })?.localizedName ?? ""
-                                self.displayEmptyAppPanel(bundleID: bid, appName: appName, appIcon: appIcon, at: self.lastPanelIconCenter)
-                            } else {
-                                self.hidePanel()
-                            }
-                        }
-                        return
-                    }
-
-                    // Delayed full refresh
-                    self.pendingRefreshTask?.cancel()
-                    let refreshTask = DispatchWorkItem { [weak self] in
-                        guard let self else { return }
-                        self.thumbnailCache.removeAll()
-                        self.isLoadingPreview = false
-                        self.lastShownBundleID = nil
-                        if let bid = self.lastHoveredBundleID,
-                           let item = self.dockItems.first(where: { $0.bundleID == bid }) {
-                            self.loadPreview(for: bid, appName: item.name, at: self.dockItemCenter(item))
-                        }
-                    }
-                    self.pendingRefreshTask = refreshTask
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: refreshTask)
-                }
-                closeBtn.alphaValue = 0
-                card.addSubview(closeBtn) // inside card, above thumbnail
-                card.associatedCloseButton = closeBtn
+                // DEACTIVATED: Preview-Only Mode (2026-03-30)
+                // Was: Close-Button auf jedem Thumbnail + Close-Animation-Logik
+                // CloseButton, closeBtn.onClose handler, card.associatedCloseButton — all removed
 
                 let tl = NSTextField(labelWithString: thumb.title.isEmpty ? "Fenster" : thumb.title)
                 tl.font = .systemFont(ofSize: 8)
@@ -1268,63 +1001,18 @@ class DockPreviewController {
                 tl.alignment = .center
                 tl.lineBreakMode = .byTruncatingMiddle
                 tl.frame = NSRect(x: x, y: contentH - pad - headerH - th - titleH - 4, width: tw, height: titleH)
-                if isOverflow { tl.alphaValue = 0 }
+                // DEACTIVATED: Preview-Only Mode (2026-03-30)
+                // Was: Overflow-Titel unsichtbar machen
+                // if isOverflow { tl.alphaValue = 0 }
                 titleLabels.append(tl)
                 innerView.addSubview(tl)
             }
 
-            // Overflow indicator — clickable, opens list of hidden windows
-            let overflow = group.windows.count - renderCount
-            let hiddenWindows = Array(group.windows.dropFirst(maxThumbsPerDesktop))
-            if overflow > 0 || !hiddenWindows.isEmpty {
-                let displayOverflow = group.windows.count - maxThumbsPerDesktop
-                let overflowBtn = ClickableView(frame: NSRect(
-                    x: xOffset + groupW + 2,
-                    y: contentH - pad - headerH - th/2 - 10,
-                    width: 28, height: 20
-                ))
-                overflowBtn.wantsLayer = true
-                overflowBtn.layer?.cornerRadius = 6
-                overflowBtn.layer?.backgroundColor = color.withAlphaComponent(0.15).cgColor
-
-                let label = NSTextField(labelWithString: "+\(displayOverflow)")
-                label.font = .systemFont(ofSize: 9, weight: .semibold)
-                label.textColor = color
-                label.alignment = .center
-                label.frame = NSRect(x: 0, y: 2, width: 28, height: 14)
-                overflowBtn.addSubview(label)
-
-                let overflowThumbs = Array(group.windows.suffix(from: min(maxThumbsPerDesktop, group.windows.count)))
-                let bid = appBundleID
-                overflowBtn.onClick = { [weak self] in
-                    guard let self else { return }
-                    let menu = NSMenu()
-                    menu.font = .systemFont(ofSize: 12)
-                    for thumb in overflowThumbs {
-                        let stateStr: String
-                        switch thumb.state {
-                        case .normal: stateStr = ""
-                        case .minimized: stateStr = " ⏷"
-                        case .fullscreen: stateStr = " ⛶"
-                        }
-                        let title = (thumb.title.isEmpty ? "Fenster" : thumb.title) + stateStr
-                        let item = NSMenuItem(title: title, action: #selector(self.overflowWindowClicked(_:)), keyEquivalent: "")
-                        item.target = self
-                        item.representedObject = ["wid": thumb.windowID, "sid": thumb.spaceID, "pid": thumb.pid, "bid": bid] as [String: Any]
-                        if let icon = thumb.appIcon {
-                            item.image = icon
-                            item.image?.size = NSSize(width: 16, height: 16)
-                        }
-                        menu.addItem(item)
-                    }
-                    menu.popUp(positioning: nil, at: NSPoint(x: 0, y: overflowBtn.frame.height), in: overflowBtn)
-                }
-                innerView.addSubview(overflowBtn)
-                currentGroupViews.append(overflowBtn)
-            }
+            // DEACTIVATED: Preview-Only Mode (2026-03-30)
+            // Was: "+N" Overflow-Indikator mit Klick-Menü für versteckte Fenster
 
             groupViews.append(currentGroupViews)
-            xOffset += groupW + (overflow > 0 ? 26 : 0) + groupGap
+            xOffset += groupW + groupGap
         }
 
         // Panel sits directly above dock — no gap, no speech bubble arrow

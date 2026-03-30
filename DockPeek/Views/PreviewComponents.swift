@@ -94,7 +94,9 @@ class ClickableView: NSView {
     var onClick: (() -> Void)?
     var onRightClick: ((NSPoint) -> Void)?
     var savedBorderColor: CGColor?
-    weak var associatedCloseButton: CloseButton?
+    // DEACTIVATED: Preview-Only Mode (2026-03-30)
+    // Was: Close-Button Referenz für Hover-Animation
+    // weak var associatedCloseButton: CloseButton?
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -119,12 +121,16 @@ class ClickableView: NSView {
         savedBorderColor = layer?.borderColor
         layer?.borderColor = NSColor.controlAccentColor.cgColor
         layer?.borderWidth = 2
-        associatedCloseButton?.animator().alphaValue = 1
+        // DEACTIVATED: Preview-Only Mode (2026-03-30)
+        // Was: Close-Button bei Hover einblenden
+        // associatedCloseButton?.animator().alphaValue = 1
     }
     override func mouseExited(with event: NSEvent) {
         layer?.borderColor = savedBorderColor ?? NSColor.separatorColor.cgColor
         layer?.borderWidth = 1
-        associatedCloseButton?.animator().alphaValue = 0
+        // DEACTIVATED: Preview-Only Mode (2026-03-30)
+        // Was: Close-Button bei Hover ausblenden
+        // associatedCloseButton?.animator().alphaValue = 0
     }
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
