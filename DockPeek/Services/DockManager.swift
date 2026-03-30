@@ -80,10 +80,18 @@ final class DockManager {
     }()
 
     init() {
-        ensureSpaceSwitchDisabled()
+        // DEACTIVATED: Preview-Only Mode (2026-03-30)
+        // Was: ensureSpaceSwitchDisabled() — setzte workspaces, mru-spaces, show-tooltip, AppleSpacesSwitchOnActivate
+        // Grund: App reduziert auf Preview + Desktop-Benennung
+        // ensureSpaceSwitchDisabled()
     }
 
     // MARK: - Click Interceptor (CGEventTap)
+
+    // DEACTIVATED: Preview-Only Mode (2026-03-30)
+    // Was: CGEventTap für Dock-Click-Interception
+    // Grund: App reduziert auf Preview + Desktop-Benennung
+    // Aufruf deaktiviert in DesktopStore.installClickInterceptor()
 
     /// Creates a session-level CGEventTap for left-mouse-down events, inserted at the
     /// head of the event stream so we see clicks before the Dock. Requires Accessibility
@@ -258,6 +266,38 @@ final class DockManager {
 
     // MARK: - Space Switch Prevention
 
+    /// Prüft ob mru-spaces deaktiviert ist (Voraussetzung für stabile Desktop-Reihenfolge).
+    /// Setzt NICHTS automatisch — User muss in Settings aktiv konfigurieren.
+    func checkMruSpacesStatus() -> Bool {
+        let dockDefaults = UserDefaults(suiteName: "com.apple.dock")
+        guard let value = dockDefaults?.object(forKey: "mru-spaces") as? Bool else {
+            return false // nicht gesetzt = nicht konfiguriert
+        }
+        return !value // mru-spaces=false → return true (korrekt konfiguriert)
+    }
+
+    /// Setzt mru-spaces=false und startet den Dock neu.
+    /// Nur auf explizite User-Aktion aufrufen (Button in Settings).
+    func configureMruSpaces() {
+        let plistPath = NSHomeDirectory() + "/Library/Preferences/com.apple.dock.plist"
+        let dict = NSMutableDictionary(contentsOfFile: plistPath) ?? NSMutableDictionary()
+        dict["mru-spaces"] = false
+        dict.write(toFile: plistPath, atomically: true)
+
+        Task.detached {
+            try? await Task.sleep(for: .seconds(1.5))
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+            process.arguments = ["Dock"]
+            try? process.run()
+        }
+    }
+
+    // DEACTIVATED: Preview-Only Mode (2026-03-30)
+    // Was: Automatisches Setzen von workspaces, mru-spaces, show-tooltip, AppleSpacesSwitchOnActivate
+    // Grund: App reduziert auf Preview + Desktop-Benennung — nur noch mru-spaces Check via checkMruSpacesStatus()
+    // Ersetzt durch: checkMruSpacesStatus() (read-only) + configureMruSpaces() (explizite User-Aktion)
+
     /// Writes macOS defaults to prevent the Dock from auto-switching spaces.
     /// Sets `workspaces=false`, `show-tooltip=false`, `mru-spaces=false` in com.apple.dock,
     /// and `AppleSpacesSwitchOnActivate=false` in NSGlobalDomain. Restarts the Dock if changes were made.
@@ -268,6 +308,10 @@ final class DockManager {
     /// **Gotcha:** `workspaces=false` does NOT prevent space switches for minimized windows.
     /// That case is handled by the CGEventTap (Case 2 in `preHandleDockClick`).
     func ensureSpaceSwitchDisabled() {
+        // DEACTIVATED: Preview-Only Mode (2026-03-30)
+        // Kompletter Body deaktiviert — App setzt keine macOS-Einstellungen mehr automatisch.
+        // Alte Implementierung bleibt als Referenz erhalten.
+        /*
         var needsDockRestart = false
 
         if let dockPlist = NSMutableDictionary(contentsOfFile: dockPlistPath) {
@@ -315,6 +359,7 @@ final class DockManager {
                 try? p.run()
             }
         }
+        */
     }
 
     // MARK: - Window Detection
