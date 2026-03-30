@@ -83,7 +83,7 @@ class DesktopNameLabelController {
             defer: false
         )
         w.level = .statusBar
-        w.collectionBehavior = [.stationary, .ignoresCycle]
+        w.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         w.backgroundColor = .clear
         w.isOpaque = false
         w.hasShadow = true
