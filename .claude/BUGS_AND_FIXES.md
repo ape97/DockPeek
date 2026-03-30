@@ -398,3 +398,41 @@
 **Status:** ✅ Fixed
 
 ### Test-Ergebnis: 54/54 PASS ✅
+
+---
+
+## Session: Preview-Only Redesign (2026-03-30)
+
+### Architektur-Entscheidung: Preview-Only Mode
+App reduziert auf Kern-Features: Dock-Hover-Preview + Desktop-Benennung.
+Alle Fenster-Management-Features deaktiviert (Code bleibt, wird nicht ausgeführt):
+- CGEventTap / Dock-Click-Interception
+- Close-Buttons, Kontextmenüs, "Neues Fenster"
+- Single-Instance, Activation Observer, openNewWindow()
+- `workspaces=false`, `AppleSpacesSwitchOnActivate=false`, `show-tooltip=false`
+- Overflow-Cards / Close-Animation
+- Keyboard-Navigation (Tab/Enter) — nur Escape bleibt
+
+Einziges macOS-Setting: `mru-spaces=false` — wird NICHT automatisch gesetzt,
+nur auf explizite User-Aktion (Button in Settings).
+
+**Spec:** `.claude/specs/2026-03-30-preview-only-redesign.md`
+**Plan:** `.claude/plans/2026-03-30-preview-only-redesign.md`
+
+### Bug #34: Floating Badge nur auf einem Desktop sichtbar
+**Gefunden:** 2026-03-30
+**Ursache:** `collectionBehavior` in `DesktopNameLabel.swift` fehlte `.canJoinAllSpaces`. Fenster war nur auf dem Space sichtbar, wo es erstellt wurde.
+**Fix:** `w.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]`
+**Status:** ✅ Fixed
+
+### Bug #35: Dock Auto-Hide — Preview bleibt stehen
+**Gefunden:** 2026-03-30
+**Ursache:** Preview-Panel prüfte nicht ob der Dock noch sichtbar ist
+**Fix:** `isDockVisible()` Check in `tick()` — prüft ob Dock-Prozess ein sichtbares Fenster bei Layer 0 hat. Wenn Dock auto-hides → `hidePanel()`.
+**Status:** ✅ Fixed
+
+### Bug #36: Fullscreen-Fenster falsche Desktop-Farbe
+**Gefunden:** 2026-03-30
+**Ursache:** `fullscreenToDesktop` Map ordnete ALLE Fullscreen-Spaces dem aktuellen Desktop zu statt dem Ursprungs-Desktop.
+**Fix:** Space-Liste iterieren, letzten regulären Desktop vor jedem Fullscreen-Space als Ursprung verwenden (macOS platziert Fullscreen-Spaces nach ihrem Ursprungs-Desktop in der Liste).
+**Status:** ✅ Fixed

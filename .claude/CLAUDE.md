@@ -567,3 +567,53 @@ Failed approaches for dialog handling (DO NOT retry):
 - ❌ Relying on SCShareableContent for dialog detection (inconsistent, flickers)
 - ❌ Excluding all windows without AXCloseButton (breaks real windows behind dialog sheets)
 - ❌ `disableScreenUpdatesUntilFlush()` (deprecated in macOS 15, no-op)
+
+---
+
+## 11. Preview-Only Redesign (2026-03-30)
+
+### What Changed
+
+DockPeek was redesigned from a window-management app to a **pure display app**. The app now only shows dock hover previews and desktop names — it no longer intercepts dock clicks, opens/closes windows, or manages single-instance apps.
+
+### Active Features
+- **Dock-Hover-Preview:** Read-only thumbnail preview of all windows, grouped by desktop
+- **Thumbnail-Klick:** Click → switch to that desktop + focus the window
+- **Desktop-Benennung:** Floating Badge, Notch Badge, Notch Slide indicators
+- **Settings:** Appearance, Behavior, Desktops, System (mru-spaces only)
+- **Escape:** Closes the preview panel
+
+### Deactivated Features (code preserved, not executed)
+
+All deactivated code is marked with:
+```
+// DEACTIVATED: Preview-Only Mode (2026-03-30)
+```
+
+| Feature | File | What's Disabled |
+|---------|------|----------------|
+| CGEventTap | DockManager.swift | `installClickInterceptor()` not called |
+| macOS Settings | DockManager.swift | `ensureSpaceSwitchDisabled()` body commented out |
+| Activation Observer | DesktopStore.swift | `didActivateApplicationNotification` observer not registered |
+| onNeedNewWindow | DesktopStore.swift | Callback not set |
+| Close-Buttons | DockPreviewPanel.swift | CloseButton not created on cards |
+| Context Menus | DockPreviewPanel.swift | Right-click handlers removed |
+| Empty-State Button | DockPreviewPanel.swift | "Neues Fenster" button removed |
+| Overflow Cards | DockPreviewPanel.swift | All windows rendered, no hidden overflow |
+| Close Animation | DockPreviewPanel.swift | No close = no animation needed |
+| Keyboard Nav | DockPreviewPanel.swift | Only Escape remains |
+| Debug Close Test | DebugView.swift | "Test Close" button removed |
+| Old System Settings | PreferencesView.swift | workspaces/AppleSpacesSwitchOnActivate/show-tooltip display removed |
+
+### macOS Settings Policy
+
+The app now only cares about `mru-spaces=false` (stable desktop order). It is **never set automatically** — the user must click "Jetzt konfigurieren" in Settings → System. Methods:
+- `DockManager.checkMruSpacesStatus() -> Bool` — read-only check
+- `DockManager.configureMruSpaces()` — sets mru-spaces=false + dock restart (user action only)
+
+### Files Not in Section 3 Table
+| File | Lines | Role |
+|------|-------|------|
+| `Views/PreviewComponents.swift` | ~140 | KeyablePanel, CloseButton (deactivated), ClickableView |
+| `Views/NotchBadge.swift` | ~150 | Notch drop animation indicator |
+| `Views/NotchSlide.swift` | ~160 | Notch slide animation indicator |
