@@ -176,6 +176,13 @@ class DockPreviewController {
         }
 
         guard let store else { return }
+
+        // Dock auto-hide: Preview schließen wenn Dock nicht sichtbar
+        if panel?.isVisible == true && !isDockVisible() {
+            hidePanel()
+            return
+        }
+
         let mouse = NSEvent.mouseLocation
 
         // Hide if any mouse button pressed outside preview
@@ -306,6 +313,24 @@ class DockPreviewController {
             } else {
                 lastShownBundleID = bundleID
             }
+        }
+    }
+
+    // MARK: - Dock Visibility
+
+    /// Prüft ob der Dock sichtbar ist (nicht auto-hidden)
+    private func isDockVisible() -> Bool {
+        let dockPID = NSRunningApplication.runningApplications(
+            withBundleIdentifier: "com.apple.dock"
+        ).first?.processIdentifier ?? 0
+
+        guard let windowList = CGWindowListCopyWindowInfo(
+            [.optionOnScreenOnly], kCGNullWindowID
+        ) as? [[String: Any]] else { return true }
+
+        return windowList.contains { info in
+            (info[kCGWindowOwnerPID as String] as? pid_t) == dockPID &&
+            (info[kCGWindowLayer as String] as? Int) == 0
         }
     }
 
