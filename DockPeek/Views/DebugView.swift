@@ -26,9 +26,11 @@ struct DebugView: View {
                     Button("Open Preview for frontmost") {
                         testPreviewForFrontmost()
                     }
-                    Button("Test Close (TextEdit)") {
-                        testClose("com.apple.TextEdit")
-                    }
+                    // DEACTIVATED: Preview-Only Mode (2026-03-30)
+                    // Was: Test Close Button
+                    // Button("Test Close (TextEdit)") {
+                    //     testClose("com.apple.TextEdit")
+                    // }
                     Button("Refresh Dock Items") {
                         addLog("Dock items refreshed")
                     }

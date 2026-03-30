@@ -429,35 +429,48 @@ struct PreferencesView: View {
                 }
             }
 
-            Section(NSLocalizedString("system.macosConfig", comment: "")) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(NSLocalizedString("system.configDesc", comment: ""))
-                        .font(.callout).foregroundStyle(.secondary)
+            // DEACTIVATED: Preview-Only Mode (2026-03-30)
+            // Was: Full macOS config section showing workspaces, AppleSpacesSwitchOnActivate, show-tooltip
+            // and "Configure Optimal" button calling store.dockManager.ensureSpaceSwitchDisabled()
 
+            // -- mru-spaces Section --
+            Section {
+                if store.mruSpacesConfigured {
                     HStack {
-                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                        Text("workspaces=false").font(.system(.body, design: .monospaced))
-                        Text("— \(NSLocalizedString("system.dockNoSwitch", comment: ""))")
-                            .font(.callout).foregroundStyle(.secondary)
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("Desktop-Reihenfolge ist fixiert")
                     }
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                        Text("AppleSpacesSwitchOnActivate=false").font(.system(.body, design: .monospaced))
-                        Text("— \(NSLocalizedString("system.appNoSwitch", comment: ""))")
-                            .font(.callout).foregroundStyle(.secondary)
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                                .font(.title2)
+                            Text("Desktop-Reihenfolge nicht fixiert")
+                                .font(.headline)
+                                .foregroundColor(.orange)
+                        }
+                        Text("DockPeek benötigt eine feste Desktop-Reihenfolge für korrekte Zuordnung von Fenstern zu Desktops. Ohne diese Einstellung können Desktops nach Nutzung umsortiert werden.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Button("Jetzt konfigurieren") {
+                            store.dockManager.configureMruSpaces()
+                            Task {
+                                try? await Task.sleep(for: .seconds(2.5))
+                                await MainActor.run {
+                                    store.mruSpacesConfigured = store.dockManager.checkMruSpacesStatus()
+                                }
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                        Text("mru-spaces=false").font(.system(.body, design: .monospaced))
-                        Text("— Desktops nicht automatisch umordnen")
-                            .font(.callout).foregroundStyle(.secondary)
-                    }
+                    .padding()
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(8)
                 }
-
-                Button(NSLocalizedString("system.configureOptimal", comment: "")) {
-                    store.dockManager.ensureSpaceSwitchDisabled()
-                }
-                .controlSize(.large)
+            } header: {
+                Text("macOS Konfiguration")
             }
 
             Section(NSLocalizedString("system.autostart", comment: "")) {
