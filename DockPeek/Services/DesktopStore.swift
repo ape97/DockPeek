@@ -37,6 +37,7 @@ final class DesktopStore: ObservableObject {
     @Published var singleInstanceApps: [String] = []
     @Published var labelSettings: LabelSettings = LabelSettings()
     @Published var previewSettings: PreviewSettings = PreviewSettings()
+    @Published var mruSpacesConfigured: Bool = false
 
     private let detector = SpaceDetector.shared
     let dockManager = DockManager()
@@ -73,10 +74,15 @@ final class DesktopStore: ObservableObject {
         syncWithSystem()
         lastKnownSpaceCount = desktops.count
         installObservers()
-        installClickInterceptor()
+        // DEACTIVATED: Preview-Only Mode (2026-03-30)
+        // Was: CGEventTap für Dock-Click-Interception
+        // Grund: App reduziert auf Preview + Desktop-Benennung
+        // installClickInterceptor()
         updateLabel()
         enableAutostartIfNeeded()
         startSpaceSyncTimer()
+
+        mruSpacesConfigured = dockManager.checkMruSpacesStatus()
 
         Task {
             try? await Task.sleep(for: .seconds(2))
@@ -89,22 +95,28 @@ final class DesktopStore: ObservableObject {
             self?.ignoreActivationsUntil = Date().addingTimeInterval(0.5)
             self?.lastActivationWasDockClick = false
         }
-        dockManager.onNeedNewWindow = { [weak self] bundleID in
-            guard let self else { return }
-            self.ignoreActivationsUntil = Date().addingTimeInterval(0.5)
-            self.lastActivationWasDockClick = false
-            Task { @MainActor in
-                if self.isSingleInstance(bundleID) {
-                    self.switchToAppWindow(bundleID: bundleID)
-                    return
-                }
-                let success = self.dockManager.openNewWindow(bundleIdentifier: bundleID)
-                if !success {
-                    self.switchToAppWindow(bundleID: bundleID)
-                }
-            }
-        }
-        dockManager.installClickInterceptor()
+        // DEACTIVATED: Preview-Only Mode (2026-03-30)
+        // Was: Callback für neue Fenster öffnen
+        // Grund: App reduziert auf Preview + Desktop-Benennung
+        // dockManager.onNeedNewWindow = { [weak self] bundleID in
+        //     guard let self else { return }
+        //     self.ignoreActivationsUntil = Date().addingTimeInterval(0.5)
+        //     self.lastActivationWasDockClick = false
+        //     Task { @MainActor in
+        //         if self.isSingleInstance(bundleID) {
+        //             self.switchToAppWindow(bundleID: bundleID)
+        //             return
+        //         }
+        //         let success = self.dockManager.openNewWindow(bundleIdentifier: bundleID)
+        //         if !success {
+        //             self.switchToAppWindow(bundleID: bundleID)
+        //         }
+        //     }
+        // }
+        // DEACTIVATED: Preview-Only Mode (2026-03-30)
+        // Was: CGEventTap für Dock-Click-Interception
+        // Grund: App reduziert auf Preview + Desktop-Benennung
+        // dockManager.installClickInterceptor()
     }
 
     var currentDesktop: DesktopConfig? {
@@ -354,56 +366,59 @@ final class DesktopStore: ObservableObject {
             Task { @MainActor [weak self] in self?.onSpaceChanged() }
         }
 
-        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
-        ) { notification in
-            let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-            let bundleID = app?.bundleIdentifier
-
-            Task { @MainActor [weak self] in
-                guard let self, self.autoNewWindowEnabled,
-                      let bundleID,
-                      bundleID != Bundle.main.bundleIdentifier,
-                      Date() > self.ignoreActivationsUntil
-                else { return }
-
-                let isDockClick = self.dockManager.isMouseInDockArea()
-
-                self.lastActivatedBundleID = bundleID
-                self.lastActivationTime = Date()
-                self.lastActivationWasDockClick = isDockClick
-
-                guard isDockClick else { return }
-
-                if let app, let launchDate = app.launchDate,
-                   Date().timeIntervalSince(launchDate) < 2.0 {
-                    return
-                }
-
-                if self.isSingleInstance(bundleID) {
-                    if !self.dockManager.appHasWindowsOnCurrentSpace(bundleID) {
-                        self.switchToAppWindow(bundleID: bundleID)
-                        self.ignoreActivationsUntil = Date().addingTimeInterval(1.0)
-                    }
-                    return
-                }
-
-                try? await Task.sleep(for: .milliseconds(300))
-                guard Date() > self.ignoreActivationsUntil else { return }
-
-                if !self.dockManager.appHasWindowsOnCurrentSpace(bundleID) {
-                    if self.dockManager.hasMinimizedWindows(for: bundleID) {
-                        let currentSpaceID = self.detector.currentSpaceID()
-                        if !self.dockManager.unminimizeWindow(for: bundleID, preferSpaceID: currentSpaceID) {
-                            _ = self.dockManager.openNewWindow(bundleIdentifier: bundleID)
-                        }
-                    } else {
-                        _ = self.dockManager.openNewWindow(bundleIdentifier: bundleID)
-                    }
-                    self.ignoreActivationsUntil = Date().addingTimeInterval(1.0)
-                }
-            }
-        }
+        // DEACTIVATED: Preview-Only Mode (2026-03-30)
+        // Was: Activation Observer für automatische neue Fenster
+        // Grund: App reduziert auf Preview + Desktop-Benennung
+        // activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+        //     forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        // ) { notification in
+        //     let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+        //     let bundleID = app?.bundleIdentifier
+        //
+        //     Task { @MainActor [weak self] in
+        //         guard let self, self.autoNewWindowEnabled,
+        //               let bundleID,
+        //               bundleID != Bundle.main.bundleIdentifier,
+        //               Date() > self.ignoreActivationsUntil
+        //         else { return }
+        //
+        //         let isDockClick = self.dockManager.isMouseInDockArea()
+        //
+        //         self.lastActivatedBundleID = bundleID
+        //         self.lastActivationTime = Date()
+        //         self.lastActivationWasDockClick = isDockClick
+        //
+        //         guard isDockClick else { return }
+        //
+        //         if let app, let launchDate = app.launchDate,
+        //            Date().timeIntervalSince(launchDate) < 2.0 {
+        //             return
+        //         }
+        //
+        //         if self.isSingleInstance(bundleID) {
+        //             if !self.dockManager.appHasWindowsOnCurrentSpace(bundleID) {
+        //                 self.switchToAppWindow(bundleID: bundleID)
+        //                 self.ignoreActivationsUntil = Date().addingTimeInterval(1.0)
+        //             }
+        //             return
+        //         }
+        //
+        //         try? await Task.sleep(for: .milliseconds(300))
+        //         guard Date() > self.ignoreActivationsUntil else { return }
+        //
+        //         if !self.dockManager.appHasWindowsOnCurrentSpace(bundleID) {
+        //             if self.dockManager.hasMinimizedWindows(for: bundleID) {
+        //                 let currentSpaceID = self.detector.currentSpaceID()
+        //                 if !self.dockManager.unminimizeWindow(for: bundleID, preferSpaceID: currentSpaceID) {
+        //                     _ = self.dockManager.openNewWindow(bundleIdentifier: bundleID)
+        //                 }
+        //             } else {
+        //                 _ = self.dockManager.openNewWindow(bundleIdentifier: bundleID)
+        //             }
+        //             self.ignoreActivationsUntil = Date().addingTimeInterval(1.0)
+        //         }
+        //     }
+        // }
     }
 
     // MARK: - Single Instance Apps
