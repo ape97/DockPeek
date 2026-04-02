@@ -4,6 +4,7 @@ import ScreenCaptureKit
 @_silgen_name("_AXUIElementGetWindow")
 private func _AXUIElementGetWindow(_ element: AXUIElement, _ wid: UnsafeMutablePointer<CGWindowID>) -> AXError
 
+
 enum WindowState {
     case normal       // visible on desktop
     case minimized    // in dock
@@ -183,13 +184,34 @@ class DockPreviewController {
 
         guard let store else { return }
 
+        let mouse = NSEvent.mouseLocation
+
+        // Mouse over or near preview panel? Keep it (and the dock) visible.
+        // This MUST run before the isDockVisible() check — when the user moves
+        // the mouse from the dock to the panel, the dock may start hiding,
+        // but the panel should stay as long as the mouse is on it.
+        if let panel, panel.isVisible {
+            let extended = panel.frame.insetBy(dx: -20, dy: -15)
+            if extended.contains(mouse) {
+                // Still refresh if showing empty state (app may have opened a window)
+                if currentThumbnails.isEmpty, !isLoadingPreview,
+                   Date().timeIntervalSince(lastStateRefresh) > 0.5,
+                   let bid = lastShownBundleIDForPanel.isEmpty ? nil : lastShownBundleIDForPanel,
+                   let item = dockItems.first(where: { $0.bundleID == bid }) {
+                    lastStateRefresh = Date()
+                    thumbnailCache.removeAll()
+                    loadPreview(for: bid, appName: item.name, at: lastPanelIconCenter)
+                }
+                return
+            }
+        }
+
         // Dock auto-hide: Preview schließen wenn Dock nicht sichtbar
+        // (only when mouse is NOT on the panel — that case is handled above)
         if panel?.isVisible == true && !isDockVisible() {
             hidePanel()
             return
         }
-
-        let mouse = NSEvent.mouseLocation
 
         // Hide if any mouse button pressed outside preview
         let pressedButtons = NSEvent.pressedMouseButtons
@@ -210,25 +232,6 @@ class DockPreviewController {
         // Block re-show during cooldowns or while right button held
         if NSEvent.pressedMouseButtons & 2 != 0 || Date() < rightClickCooldownUntil || Date() < closeCooldownUntil {
             return
-        }
-
-        // Mouse over or near preview panel? Keep it, but still auto-refresh empty state.
-        // Extended hit-area (like Windows 11) — 20px margin around the panel
-        // prevents closing when the mouse slightly exits while reaching for edge thumbnails.
-        if let panel, panel.isVisible {
-            let extended = panel.frame.insetBy(dx: -20, dy: -15)
-            if extended.contains(mouse) {
-                // Still refresh if showing empty state (app may have opened a window)
-                if currentThumbnails.isEmpty, !isLoadingPreview,
-                   Date().timeIntervalSince(lastStateRefresh) > 0.5,
-                   let bid = lastShownBundleIDForPanel.isEmpty ? nil : lastShownBundleIDForPanel,
-                   let item = dockItems.first(where: { $0.bundleID == bid }) {
-                    lastStateRefresh = Date()
-                    thumbnailCache.removeAll()
-                    loadPreview(for: bid, appName: item.name, at: lastPanelIconCenter)
-                }
-                return
-            }
         }
 
         // Context menu? Hide.
@@ -1070,7 +1073,7 @@ class DockPreviewController {
         // Position: directly above dock (no gap)
         var px = mousePoint.x - panelW / 2
         px = max(screen.frame.minX + 4, min(px, screen.frame.maxX - panelW - 4))
-        let py: CGFloat = 78 // directly above dock, no overlap
+        let py: CGFloat = 78
 
         // Small marker triangle pointing down at the hovered app
         let markerX = mousePoint.x - px
@@ -1082,7 +1085,6 @@ class DockPreviewController {
 
         if isRefresh {
             // Panel already visible — smoothly animate to new position/size
-            // (e.g., after close animation shrunk the panel, this re-centers it)
             NSAnimationContext.runAnimationGroup { ctx in
                 ctx.duration = 0.25
                 ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)

@@ -443,3 +443,15 @@ nur auf explizite User-Aktion (Button in Settings).
 **Fix:** Hit-Area um 6px von oben verkleinert (CG-Koordinaten: `minY + 6`). Die Maus muss jetzt etwas tiefer ins Dock-Icon rein bevor die Preview erscheint.
 **Verworfener Ansatz:** Nur das alte Padding entfernen (reichte nicht — schon der exakte Frame triggerte zu früh)
 **Status:** ✅ Fixed
+
+### Bug #38: Preview verschwindet bei Dock Auto-Hide wenn Maus auf Panel ist
+**Gefunden:** 2026-04-02
+**Ursache:** `isDockVisible()`-Check in `tick()` lief VOR dem Panel-Proximity-Check. Wenn die Maus vom Dock zur Preview wanderte, begann der Dock zu hiden → `isDockVisible()` gab false zurück → Panel wurde geschlossen, obwohl die Maus auf dem Panel war.
+**Fix:** Panel-Proximity-Check vor Dock-Visibility-Check verschoben in `tick()`. Wenn die Maus auf/nahe dem Panel ist, bleibt es offen unabhängig vom Dock-Status.
+**Bekannte Einschränkung:** Der Dock verschwindet trotzdem unter der Preview. macOS bietet keine API um den Dock im Auto-Hide-Overlay sichtbar zu halten ohne Nebenwirkungen.
+**Verworfene Ansätze:**
+1. ❌ `CoreDockSetAutoHideEnabled(false)` — Programme ändern ihre Größe weil macOS den Screen-Space neu berechnet
+2. ❌ Panel-Frame bis y=0 mit Event-Passthrough (`sendEvent`/`hitTest` override) — Dock prüft Cursor-Position global, ignoriert Events anderer Fenster
+3. ❌ `CoreDockSendNotification` — kein "Dock sichtbar halten" Notification vorhanden (alle verfügbaren Funktionen durchprobiert: CoreDockShow, CoreDockReveal, CoreDockPin, etc. existieren nicht)
+4. ❌ `CGWarpMouseCursorPosition` zum Dock-Rand und zurück (Ping alle 300ms) — beeinflusst die Maus des Users sichtbar
+**Status:** ✅ Teilweise gelöst (Preview bleibt, Dock hided — macOS-Limitierung)
