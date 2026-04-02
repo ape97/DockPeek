@@ -436,3 +436,10 @@ nur auf explizite User-Aktion (Button in Settings).
 **Ursache:** `fullscreenToDesktop` Map ordnete ALLE Fullscreen-Spaces dem aktuellen Desktop zu statt dem Ursprungs-Desktop.
 **Fix:** Space-Liste iterieren, letzten regulären Desktop vor jedem Fullscreen-Space als Ursprung verwenden (macOS platziert Fullscreen-Spaces nach ihrem Ursprungs-Desktop in der Liste).
 **Status:** ✅ Fixed
+
+### Bug #37: Preview triggert wenn Maus nur am oberen Rand des Dock-Icons ist
+**Gefunden:** 2026-04-02
+**Ursache:** `dockItemAtMouse()` verwendete `item.frame.insetBy(dx: -4, dy: -8)` — erweiterte den Hit-Bereich 8px über das Icon hinaus. Selbst nach Entfernen des Paddings triggerte die Preview schon beim minimalen Berühren des oberen Icon-Rands, weil App-Fenster bis zum Dock reichen und die Maus beim Arbeiten den Rand streifte.
+**Fix:** Hit-Area um 6px von oben verkleinert (CG-Koordinaten: `minY + 6`). Die Maus muss jetzt etwas tiefer ins Dock-Icon rein bevor die Preview erscheint.
+**Verworfener Ansatz:** Nur das alte Padding entfernen (reichte nicht — schon der exakte Frame triggerte zu früh)
+**Status:** ✅ Fixed

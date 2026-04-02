@@ -155,8 +155,14 @@ class DockPreviewController {
         let cgPoint = CGPoint(x: mouse.x, y: cgY)
 
         for item in dockItems {
-            let expanded = item.frame.insetBy(dx: -4, dy: -8)
-            if expanded.contains(cgPoint) { return item }
+            // Shrink hit area at top edge (closest to app windows) so preview
+            // doesn't trigger when the cursor barely grazes the dock icon.
+            // CG coordinates: origin top-left, so minY is the top edge.
+            let shrunk = CGRect(x: item.frame.minX,
+                                y: item.frame.minY + 6,
+                                width: item.frame.width,
+                                height: item.frame.height - 6)
+            if shrunk.contains(cgPoint) { return item }
         }
         return nil
     }
